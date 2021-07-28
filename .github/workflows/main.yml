@@ -14,7 +14,14 @@ on:
   workflow_dispatch:
 
 env:
-  MONGODB_URL: "${{ github.event.pull_request.base.ref == 'master' ? secrets.QA_MONGODB_URL : secrets.PRD_MONGODB_URL }}"
+  DESCRIPTION_QA: "|QA|DEV|CUSTOM|"
+  DESCRIPTION_PRD: "|PROD|DEV|CUSTOM|"
+  APP_NAME: "api-comments"
+  PATH_CHART: "./deploy/api-chart/"
+  QA_VALUES: "./deploy/values-qa.yaml"
+  QA_NAMESPACE: "qa"
+  PRD_VALUES: "./deploy/values-prod.yaml"
+  PRD_NAMESPACE: "prod"
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -44,7 +51,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_PWD }}
-      - name: Build and push Docker images | PRD
+      # PRD
+      - name: Build and push Docker images ${{ env.DESCRIPTION_PRD }}
         uses: docker/build-push-action@v2.6.1
         if: github.event.pull_request.base.ref == 'master'
         with: 
@@ -53,7 +61,8 @@ jobs:
           push: true
           tags: |
             robsoncruz/api-comments:latest
-      - name: Build and push Docker images |QA|DEV|CUSTOM
+      # QA
+      - name: Build and push Docker images ${{ env.DESCRIPTION_QA }}
         uses: docker/build-push-action@v2.6.1
         if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
         with: 
@@ -73,9 +82,43 @@ jobs:
       with:
         method: kubeconfig
         kubeconfig: ${{ secrets.K8S_CONFIG }}
-    - name: Update env MONGO_URL
+    # REPLACE - QA
+    - name: Update env MONGO_URL ${{ env.DESCRIPTION_QA }}
       uses: jacobtomlinson/gha-find-replace@master
+      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
       with:
-        find: "_QA_MONGODB_URL_VALUE_"
+        find: "_MONGODB_URL_VALUE_"
         replace: "${{ secrets.QA_MONGODB_URL }}"
-        include: "k8s/dev/api-comments-deployment.yaml"
+        include: "deploy/values-qa.yaml"
+    - name: Update env TAG_VERSION ${{ env.DESCRIPTION_QA }}
+      uses: jacobtomlinson/gha-find-replace@master
+      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      with:
+        find: "TAG_VERSION_VALUE"
+        replace: "${{ github.run_number }}"
+        include: "deploy/values-qa.yaml"
+    # DEPLOY QA
+    - name: Deploy ${{ env.DESCRIPTION_QA }}
+      uses: WyriHaximus/github-action-helm3@v2
+      with:
+        exec: helm upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.QA_NAMESPACE }} --values=${{ env.QA_VALUES }}
+    # REPLACE - PRD
+    - name: Update env MONGO_URL ${{ env.DESCRIPTION_PRD }}
+      uses: jacobtomlinson/gha-find-replace@master
+      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      with:
+        find: "_MONGODB_URL_VALUE_"
+        replace: "${{ secrets.PRD_MONGODB_URL }}"
+        include: "deploy/values-prod.yaml"
+    - name: Update env TAG_VERSION ${{ env.DESCRIPTION_PRD }}
+      uses: jacobtomlinson/gha-find-replace@master
+      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      with:
+        find: "TAG_VERSION_VALUE"
+        replace: "${{ github.run_number }}"
+        include: "deploy/values-prod.yaml"
+    # DEPLOY PRD
+    - name: Deploy ${{ env.DESCRIPTION_PRD }}
+      uses: WyriHaximus/github-action-helm3@v2
+      with:
+        exec: helm upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.PRD_NAMESPACE }} --values=${{ env.PRD_VALUES }}
