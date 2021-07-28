@@ -93,7 +93,7 @@ readinessPath: "/ready"
 
 # Variables
 config:
-  MONGODB_URL: "_MONGODB_URL_VALUE_"
+  MONGODB_URL: "mongodb+srv://rcruz:VdLQ2ZIYTXkqGrCn@cluster0.nqf2q.mongodb.net/prd_db_comments?retryWrites=true&w=majority"
   MONGODB_DB: "prd_db_comments"
   ENV: prod
-  VERSION_APP: "_VERSION_APP_"
+  VERSION_APP: "22"
