@@ -23,6 +23,8 @@ env:
   QA_NAMESPACE: "qa"
   PRD_VALUES: "./deploy/values-prod.yaml"
   PRD_NAMESPACE: "prod"
+  TEST_REF: ${{ github.ref }}
+  TEST_PR_BASE: ${{ github.event.pull_request.base.ref }}
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
