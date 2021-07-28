@@ -5,10 +5,10 @@ name: CI-CD
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: [ qa ]
+  #push:
+  #  branches: [ qa ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, qa ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -63,7 +63,7 @@ jobs:
             robsoncruz/api-comments:latest
       # QA
       - name: Build and push Docker images ${{ env.DESCRIPTION_QA }}
-        if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+        if: github.ref == 'refs/heads/qa' && github.event.pull_request.base.ref == 'qa' && github.event.pull_request.merged == 'true'
         uses: docker/build-push-action@v2.6.1
         with: 
           context: ./app
@@ -84,21 +84,21 @@ jobs:
         kubeconfig: ${{ secrets.K8S_CONFIG }}
     # REPLACE - QA
     - name: Update env MONGO_URL ${{ env.DESCRIPTION_QA }}
-      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      if: github.ref == 'refs/heads/qa' && github.event.pull_request.base.ref == 'qa' && github.event.pull_request.merged == 'true'
       uses: jacobtomlinson/gha-find-replace@master
       with:
         find: "_MONGODB_URL_VALUE_"
         replace: "${{ secrets.QA_MONGODB_URL }}"
         include: "deploy/values-qa.yaml"
     - name: Update env TAG_VERSION ${{ env.DESCRIPTION_QA }}
-      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      if: github.ref == 'refs/heads/qa' && github.event.pull_request.base.ref == 'qa' && github.event.pull_request.merged == 'true'
       uses: jacobtomlinson/gha-find-replace@master
       with:
         find: "_TAG_VALUE_"
         replace: "${{ github.run_number }}"
         include: "deploy/values-qa.yaml"
     - name: Update env VERSION_APP ${{ env.DESCRIPTION_QA }}
-      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      if: github.ref == 'refs/heads/qa' && github.event.pull_request.base.ref == 'qa' && github.event.pull_request.merged == 'true'
       uses: jacobtomlinson/gha-find-replace@master
       with:
         find: "_VERSION_APP_"
@@ -106,7 +106,7 @@ jobs:
         include: "deploy/values-qa.yaml"
     # DEPLOY QA
     - name: Deploy ${{ env.DESCRIPTION_QA }}
-      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      if: github.ref == 'refs/heads/qa' && github.event.pull_request.base.ref == 'qa' && github.event.pull_request.merged == 'true'
       uses: hiberbee/github-action-helm@latest
       with:
         helm-command: upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.QA_NAMESPACE }} --values=${{ env.QA_VALUES }}
