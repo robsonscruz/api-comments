@@ -15,7 +15,7 @@ on:
 
 env:
   DESCRIPTION_QA: "|QA|DEV|CUSTOM|"
-  DESCRIPTION_PRD: "|PROD|DEV|CUSTOM|"
+  DESCRIPTION_PRD: "|PROD|"
   APP_NAME: "api-comments"
   PATH_CHART: "./deploy/api-chart/"
   QA_VALUES: "./deploy/values-qa.yaml"
@@ -53,7 +53,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PWD }}
       # PRD
       - name: Build and push Docker images ${{ env.DESCRIPTION_PRD }}
-        if: github.event.pull_request.base.ref == 'master'
+        if: github.event.pull_request.base.ref == 'master' && github.event.pull_request.merged == 'true'
         uses: docker/build-push-action@v2.6.1
         with: 
           context: ./app
@@ -112,21 +112,21 @@ jobs:
         helm-command: upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.QA_NAMESPACE }} --values=${{ env.QA_VALUES }}
     # REPLACE - PRD
     - name: Update env MONGO_URL ${{ env.DESCRIPTION_PRD }}
-      if: github.event.pull_request.base.ref == 'master'
+      if: github.event.pull_request.base.ref == 'master' && github.event.pull_request.merged == 'true'
       uses: jacobtomlinson/gha-find-replace@master
       with:
         find: "_MONGODB_URL_VALUE_"
         replace: "${{ secrets.PRD_MONGODB_URL }}"
         include: "deploy/values-prod.yaml"
     - name: Update env TAG_VERSION ${{ env.DESCRIPTION_PRD }}
-      if: github.event.pull_request.base.ref == 'master'
+      if: github.event.pull_request.base.ref == 'master' && github.event.pull_request.merged == 'true'
       uses: jacobtomlinson/gha-find-replace@master
       with:
         find: "_TAG_VALUE_"
         replace: "${{ github.run_number }}"
         include: "deploy/values-prod.yaml"
     - name: Update env VERSION_APP ${{ env.DESCRIPTION_PRD }}
-      if: github.event.pull_request.base.ref == 'master'
+      if: github.event.pull_request.base.ref == 'master' && github.event.pull_request.merged == 'true'
       uses: jacobtomlinson/gha-find-replace@master
       with:
         find: "_VERSION_APP_"
@@ -134,7 +134,7 @@ jobs:
         include: "deploy/values-prod.yaml"
     # DEPLOY PRD
     - name: Deploy ${{ env.DESCRIPTION_PRD }}
-      if: github.event.pull_request.base.ref == 'master'
+      if: github.event.pull_request.base.ref == 'master' && github.event.pull_request.merged == 'true'
       uses: hiberbee/github-action-helm@latest
       with:
         exec: helm upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.PRD_NAMESPACE }} --values=${{ env.PRD_VALUES }}
