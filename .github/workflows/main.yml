@@ -64,7 +64,7 @@ jobs:
             robsoncruz/api-comments:latest
       # QA
       - name: Build and push Docker images ${{ env.DESCRIPTION_QA }}
-        if: contains(github.base_ref, 'qa') && github.event.pull_request.merged == 'true'
+        if: github.ref == 'refs/heads/qa' && github.event.pull_request.merged == 'true'
         uses: docker/build-push-action@v2.6.1
         with: 
           context: ./app
