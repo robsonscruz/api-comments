@@ -93,6 +93,6 @@ readinessPath: "/ready"
 
 # Variables
 config:
-  MONGODB_URL: _QA_MONGODB_URL_VALUE_
+  MONGODB_URL: "_QA_MONGODB_URL_VALUE_"
   MONGODB_DB: "db_commets"
   ENV: qa
