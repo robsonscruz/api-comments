@@ -13,6 +13,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  MONGODB_URL: "${{ github.event.pull_request.base.ref == 'master' ? secrets.QA_MONGODB_URL : secrets.PRD_MONGODB_URL }}"
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -59,3 +62,20 @@ jobs:
           push: true
           tags: |
             robsoncruz/api-comments:${{ github.run_number }}
+
+  CD:
+   runs-on: ubuntu-latest
+   needs: [CI]
+   steps:
+    - uses: actions/checkout@v2
+    - name: Kubernetes set context
+      uses: Azure/k8s-set-context@v1.1
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.K8S_CONFIG }}
+    - name: Update env MONGO_URL
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_QA_MONGODB_URL_VALUE_"
+        replace: "${{ secrets.QA_MONGODB_URL }}"
+        include: "k8s/dev/api-comments-deployment.yaml"
