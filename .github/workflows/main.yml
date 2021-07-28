@@ -25,6 +25,7 @@ env:
   PRD_NAMESPACE: "prod"
   TEST_REF: ${{ github.ref }}
   TEST_PR_BASE: ${{ github.event.pull_request.base.ref }}
+  TEST_PR_CLOSED: ${{ github.event.pull_request.base.ref }}
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -66,7 +67,7 @@ jobs:
             robsoncruz/api-comments:latest
       # QA
       - name: Build and push Docker images ${{ env.DESCRIPTION_QA }}
-        if: github.ref == 'refs/heads/qa' && github.event.pull_request.merged == 'true'
+        if: github.ref == 'refs/heads/qa' || github.event.pull_request.base.ref == 'qa'
         uses: docker/build-push-action@v2.6.1
         with: 
           context: ./app
