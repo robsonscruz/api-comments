@@ -99,9 +99,9 @@ jobs:
         include: "deploy/values-qa.yaml"
     # DEPLOY QA
     - name: Deploy ${{ env.DESCRIPTION_QA }}
-      uses: WyriHaximus/github-action-helm3@v2
+      uses: hiberbee/github-action-helm@latest
       with:
-        exec: helm upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.QA_NAMESPACE }} --values=${{ env.QA_VALUES }}
+        helm-command: upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.QA_NAMESPACE }} --values=${{ env.QA_VALUES }}
     # REPLACE - PRD
     - name: Update env MONGO_URL ${{ env.DESCRIPTION_PRD }}
       uses: jacobtomlinson/gha-find-replace@master
