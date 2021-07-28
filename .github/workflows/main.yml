@@ -141,4 +141,4 @@ jobs:
       if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
       uses: hiberbee/github-action-helm@latest
       with:
-        helm-command: helm upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.PRD_NAMESPACE }} --values=${{ env.PRD_VALUES }}
+        helm-command: upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.PRD_NAMESPACE }} --values=${{ env.PRD_VALUES }}
