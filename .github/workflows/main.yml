@@ -97,6 +97,13 @@ jobs:
         find: "_TAG_VALUE_"
         replace: "${{ github.run_number }}"
         include: "deploy/values-qa.yaml"
+    - name: Update env VERSION_APP ${{ env.DESCRIPTION_QA }}
+      if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_VERSION_APP_"
+        replace: "v.qa.${{ github.run_number }}"
+        include: "deploy/values-qa.yaml"
     # DEPLOY QA
     - name: Deploy ${{ env.DESCRIPTION_QA }}
       if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
@@ -117,6 +124,13 @@ jobs:
       with:
         find: "_TAG_VALUE_"
         replace: "${{ github.run_number }}"
+        include: "deploy/values-prod.yaml"
+    - name: Update env VERSION_APP ${{ env.DESCRIPTION_PRD }}
+      if: github.event.pull_request.base.ref == 'master'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_VERSION_APP_"
+        replace: "v.${{ github.run_number }}"
         include: "deploy/values-prod.yaml"
     # DEPLOY PRD
     - name: Deploy ${{ env.DESCRIPTION_PRD }}
