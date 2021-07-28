@@ -17,6 +17,7 @@ app.debug = True
 app.config['ENV']         = os.getenv("ENV", "dev")
 app.config['MONGODB_URL'] = os.getenv("MONGODB_URL", "mongodb+srv://localhost:27017/db_commets?retryWrites=true&w=majority")
 app.config['MONGODB_DB']  = os.getenv("MONGODB_DB", "xpto_database")
+app.config['VERSION_APP'] = os.getenv("VERSION_APP", "v.1.0.0")
 client = MongoClient(app.config['MONGODB_URL'])
 db = client[app.config['MONGODB_DB']]
 
@@ -28,7 +29,7 @@ class CommentsSchema(Schema):
 
 @app.route('/')
 def index():
-    return jsonify({'api': 'v.1.0.0', 'host': os.uname().nodename, 'env': app.config['ENV']})
+    return jsonify({'api': app.config['VERSION_APP'], 'host': os.uname().nodename, 'env': app.config['ENV']})
 
 @app.route('/unhealth', methods=['PUT'])
 def unhealth():

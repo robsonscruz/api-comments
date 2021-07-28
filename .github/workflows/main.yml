@@ -5,13 +5,27 @@ name: CI-CD
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
-  # push:
-  #  branches: [ master ]
+  #push:
+  #  branches: [ qa ]
   pull_request:
+    types: [ closed ]
     branches: [ master, qa ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+env:
+  DESCRIPTION_QA: "|QA|DEV|CUSTOM|"
+  DESCRIPTION_PRD: "|PROD|"
+  APP_NAME: "api-comments"
+  PATH_CHART: "./deploy/api-chart/"
+  QA_VALUES: "./deploy/values-qa.yaml"
+  QA_NAMESPACE: "qa"
+  PRD_VALUES: "./deploy/values-prod.yaml"
+  PRD_NAMESPACE: "prod"
+  TEST_REF: ${{ github.ref }}
+  TEST_PR_BASE: ${{ github.event.pull_request.base.ref }}
+  TEST_PR_CLOSED: ${{ github.event.pull_request.base.ref }}
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -41,21 +55,90 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_PWD }}
-      - name: Build and push Docker images | PRD
+      # PRD
+      - name: Build and push Docker images ${{ env.DESCRIPTION_PRD }}
+        if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
         uses: docker/build-push-action@v2.6.1
-        if: github.event.pull_request.base.ref == 'master'
         with: 
           context: ./app
           file: ./app/Dockerfile
           push: true
           tags: |
             robsoncruz/api-comments:latest
-      - name: Build and push Docker images |QA|DEV|CUSTOM
+      # QA
+      - name: Build and push Docker images ${{ env.DESCRIPTION_QA }}
+        if: github.ref == 'refs/heads/qa' || github.event.pull_request.base.ref == 'qa'
         uses: docker/build-push-action@v2.6.1
-        if: github.ref != 'refs/heads/master' && github.event.pull_request.base.ref != 'master'
         with: 
           context: ./app
           file: ./app/Dockerfile
           push: true
           tags: |
             robsoncruz/api-comments:${{ github.run_number }}
+
+  CD:
+   runs-on: ubuntu-latest
+   needs: [CI]
+   steps:
+    - uses: actions/checkout@v2
+    - name: Kubernetes set context
+      uses: Azure/k8s-set-context@v1.1
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.K8S_CONFIG }}
+    # REPLACE - QA
+    - name: Update env MONGO_URL ${{ env.DESCRIPTION_QA }}
+      if: github.ref == 'refs/heads/qa' || github.event.pull_request.base.ref == 'qa'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_MONGODB_URL_VALUE_"
+        replace: "${{ secrets.QA_MONGODB_URL }}"
+        include: "deploy/values-qa.yaml"
+    - name: Update env TAG_VERSION ${{ env.DESCRIPTION_QA }}
+      if: github.ref == 'refs/heads/qa' || github.event.pull_request.base.ref == 'qa'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_TAG_VALUE_"
+        replace: "${{ github.run_number }}"
+        include: "deploy/values-qa.yaml"
+    - name: Update env VERSION_APP ${{ env.DESCRIPTION_QA }}
+      if: github.ref == 'refs/heads/qa' || github.event.pull_request.base.ref == 'qa'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_VERSION_APP_"
+        replace: "v.qa.${{ github.run_number }}"
+        include: "deploy/values-qa.yaml"
+    # DEPLOY QA
+    - name: Deploy ${{ env.DESCRIPTION_QA }}
+      if: github.ref == 'refs/heads/qa' || github.event.pull_request.base.ref == 'qa'
+      uses: hiberbee/github-action-helm@latest
+      with:
+        helm-command: upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.QA_NAMESPACE }} --values=${{ env.QA_VALUES }}
+    # REPLACE - PRD
+    - name: Update env MONGO_URL ${{ env.DESCRIPTION_PRD }}
+      if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_MONGODB_URL_VALUE_"
+        replace: "${{ secrets.PRD_MONGODB_URL }}"
+        include: "deploy/values-prod.yaml"
+    - name: Update env TAG_VERSION ${{ env.DESCRIPTION_PRD }}
+      if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_TAG_VALUE_"
+        replace: "${{ github.run_number }}"
+        include: "deploy/values-prod.yaml"
+    - name: Update env VERSION_APP ${{ env.DESCRIPTION_PRD }}
+      if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
+      uses: jacobtomlinson/gha-find-replace@master
+      with:
+        find: "_VERSION_APP_"
+        replace: "v.${{ github.run_number }}"
+        include: "deploy/values-prod.yaml"
+    # DEPLOY PRD
+    - name: Deploy ${{ env.DESCRIPTION_PRD }}
+      if: github.ref == 'refs/heads/master' || github.event.pull_request.base.ref == 'master'
+      uses: hiberbee/github-action-helm@latest
+      with:
+        exec: helm upgrade ${{ env.APP_NAME }} ${{ env.PATH_CHART }} --namespace=${{ env.PRD_NAMESPACE }} --values=${{ env.PRD_VALUES }}
